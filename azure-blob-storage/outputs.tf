@@ -1,4 +1,4 @@
 output "function_app_name" {
-  value = azurerm_function_app_function.function_app.id
-  description = "Deployed function ID"
+  value = azurerm_storage_blob.storage_blob.url
+  description = "Storage url"
 }
