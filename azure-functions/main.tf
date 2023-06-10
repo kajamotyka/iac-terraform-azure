@@ -11,36 +11,29 @@ resource "azurerm_storage_account" "storage_account" {
   account_replication_type = "LRS"
 }
 
-resource "azurerm_app_service_plan" "app_service_plan" {
+resource "azurerm_service_plan" "app_service_plan" {
   name                = "${var.project}-${var.environment}-app-service-plan"
   resource_group_name = azurerm_resource_group.resource_group.name
-  location            = var.location
-  kind                = "FunctionApp"
-  reserved = true # this has to be set to true for Linux. Not related to the Premium Plan
-  sku {
-    tier = "Dynamic"
-    size = "Y1"
-  }
+  location            = var.location  
+  os_type             = "Linux"
+  sku_name            = "S1"
 }
 
 resource "azurerm_linux_function_app" "function_app" {
   name                       = "${var.project}-${var.environment}-function-app"
   resource_group_name        = azurerm_resource_group.resource_group.name
   location                   = var.location
-  app_service_plan_id        = azurerm_app_service_plan.app_service_plan.id
-  app_settings = {
-    "WEBSITE_RUN_FROM_PACKAGE" = "",
-    "FUNCTIONS_WORKER_RUNTIME" = "node",
-    "APPINSIGHTS_INSTRUMENTATIONKEY" = azurerm_application_insights.application_insights.instrumentation_key,
-  }
-  os_type = "linux"
-  site_config {
-    linux_fx_version          = "node|14"
-    use_32_bit_worker_process = false
-  }
+  service_plan_id            = azurerm_service_plan.app_service_plan.id
+
   storage_account_name       = azurerm_storage_account.storage_account.name
   storage_account_access_key = azurerm_storage_account.storage_account.primary_access_key
-  version                    = "~3"
+  
+
+  site_config {
+    application_stack {
+      python_version = "3.9"
+    }
+  }
 
   lifecycle {
     ignore_changes = [
@@ -53,10 +46,15 @@ resource "azurerm_function_app_function" "example" {
   name            = "${var.project}-${var.environment}-app-function"
   function_app_id = azurerm_linux_function_app.function_app.id
   language        = "Python"
+  file {
+    name    = "function.py"
+    content = file("function.py")
+  }
   test_data = jsonencode({
     "name" = "Azure"
   })
   config_json = jsonencode({
+    "scriptFile": "function.py",
     "bindings" = [
       {
         "authLevel" = "function"
