@@ -1,5 +1,7 @@
 import datetime
+import azure.functions as func
 
 
-def main() -> str:    
-    return f'Witaj, aktualny czas {datetime.datetime.now}!'
+def main(req: func.HttpRequest) -> func.HttpResponse:    
+    now = datetime.datetime.now().strftime("%Y-%m-%D %H:%M:%S")
+    return func.HttpResponse(f"Witaj, aktualny czas {now}!")
